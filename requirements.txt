@@ -1,0 +1,2 @@
+dataclasses
+git+https://github.com/mdolab/openconcept.git@v0.4.2#egg=openconcept
