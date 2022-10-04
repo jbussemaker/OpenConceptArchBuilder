@@ -153,153 +153,26 @@ class DynamicACModel(oc.IntegratorGroup):
         )
 
     def _add_weight_model(self, nn):
-        # Operating empty weight model
-        weight = om.Group()
-        const = weight.add_subsystem("const", om.IndepVarComp(), promotes_outputs=["*"])
-        const.add_output("W_fluids", val=20, units="kg")
-        const.add_output("structural_fudge", val=1.6, units="m/m")
-        weight.add_subsystem(
-            "wing",
-            WingWeight_SmallTurboprop(),
-            promotes_inputs=[
-                "ac|weights|MTOW",
-                "ac|weights|W_fuel_max",
-                "ac|geom|wing|S_ref",
-                "ac|geom|wing|AR",
-                "ac|geom|wing|c4sweep",
-                "ac|geom|wing|taper",
-                "ac|geom|wing|toverc",
-                "ac|q_cruise",
-            ],
-            promotes_outputs=["W_wing"],
-        )
-        weight.add_subsystem(
-            "empennage",
-            EmpennageWeight_SmallTurboprop(),
-            promotes_inputs=["ac|geom|hstab|S_ref", "ac|geom|vstab|S_ref"],
-            promotes_outputs=["W_empennage"],
-        )
-        weight.add_subsystem(
-            "fuselage",
-            FuselageWeight_SmallTurboprop(),
-            promotes_inputs=[
-                "ac|weights|MTOW",
-                "ac|geom|fuselage|length",
-                "ac|geom|fuselage|height",
-                "ac|geom|fuselage|width",
-                "ac|geom|fuselage|S_wet",
-                "ac|geom|hstab|c4_to_wing_c4",
-                "ac|q_cruise",
-            ],
-            promotes_outputs=["W_fuselage"],
-        )
-        weight.add_subsystem(
-            "nacelle", NacelleWeight_MultiTurboprop(), promotes_inputs=["P_TO"], promotes_outputs=["W_nacelle"]
-        )
-        weight.add_subsystem(
-            "gear",
-            LandingGearWeight_SmallTurboprop(),
-            promotes_inputs=["ac|weights|MLW", "ac|geom|maingear|length", "ac|geom|nosegear|length"],
-            promotes_outputs=["W_gear"],
-        )
-        weight.add_subsystem(
-            "fuelsystem",
-            FuelSystemWeight_SmallTurboprop(),
-            promotes_inputs=["ac|weights|W_fuel_max"],
-            promotes_outputs=["W_fuelsystem"],
-        )
-        weight.add_subsystem(
-            "equipment",
-            EquipmentWeight_SmallTurboprop(),
-            promotes_inputs=[
-                "ac|weights|MTOW",
-                "ac|num_passengers_max",
-                "ac|geom|fuselage|length",
-                "ac|geom|wing|AR",
-                "ac|geom|wing|S_ref",
-                "W_fuelsystem",
-            ],
-            promotes_outputs=["W_equipment"],
-        )
-        weight.add_subsystem(
-            "structural",
-            oc.AddSubtractComp(
-                output_name="W_structure",
-                input_names=["W_wing", "W_fuselage", "W_nacelle", "W_empennage", "W_gear"],
-                units="lb",
-            ),
-            promotes_outputs=["*"],
-            promotes_inputs=["*"],
-        )
-        weight.add_subsystem(
-            "structural_fudge",
-            ElementMultiplyDivideComp(
-                output_name="W_structure_adjusted",
-                input_names=["W_structure", "structural_fudge"],
-                input_units=["lb", "m/m"],
-            ),
-            promotes_inputs=["*"],
-            promotes_outputs=["*"],
-        )
-        weight.add_subsystem(
-            "totalempty",
-            oc.AddSubtractComp(
-                output_name="ac|weights|OEW",
-                input_names=[
-                    "W_structure_adjusted",
-                    "W_fuelsystem",
-                    "W_equipment",
-                    "W_fluids",
-                    "propulsion_system_weight",
-                ],
-                units="lb",
-            ),
-            promotes_outputs=["*"],
-            promotes_inputs=["*"],
-        )
-        self.add_subsystem(
-            "OEW_calc",
-            weight,
-            promotes_inputs=["ac|*", "propulsion_system_weight", ("P_TO", "ac|propulsion|engine|rating")],
-            promotes_outputs=["ac|weights|OEW"],
-        )
-
         # Integrate fuel flow
         fuel_int = self.add_subsystem(
-            "fuel_int",
-            Integrator(num_nodes=nn, method="simpson", diff_units="s", time_setup="duration"),
-            promotes_inputs=["*"],
-            promotes_outputs=["*"],
-        )
-        fuel_int.add_integrand("fuel_used", rate_name="fuel_flow", val=1.0, units="kg")
+            'fuel_int', Integrator(num_nodes=nn, method='simpson', diff_units='s', time_setup='duration'),
+            promotes_inputs=['*'], promotes_outputs=['*'])
+        fuel_int.add_integrand('fuel_used', rate_name='fuel_flow', val=1.0, units='kg')
 
         # Calculate weight by subtracting fuel used from MTOW
         # Note that fuel used is accumulated over all mission phases, therefore fuel_used here represents the total fuel
         # used since the first mission phase
         self.add_subsystem(
-            "weight",
-            oc.AddSubtractComp(
-                output_name="weight",
-                input_names=["ac|weights|MTOW", "fuel_used"],
-                units="kg",
-                vec_size=(1, nn),
-                scaling_factors=[1, -1],
-            ),
-            promotes_inputs=["*"],
-            promotes_outputs=["weight"],
-        )
+            'weight', oc.AddSubtractComp(output_name='weight', input_names=['ac|weights|MTOW', 'fuel_used'], units='kg',
+                                         vec_size=(1, nn), scaling_factors=[1, -1]),
+            promotes_inputs=['*'], promotes_outputs=['weight'])
 
         # Calculate total fuel used in this mission segment
         self.add_subsystem(
-            "seg_fuel_used",
-            om.ExecComp(
-                ["seg_fuel_used=sum(fuel_used)"],
-                seg_fuel_used={"val": 1.0, "units": "kg"},
-                fuel_used={"val": np.ones((nn,)), "units": "kg"},
-            ),
-            promotes_inputs=["*"],
-            promotes_outputs=["*"],
-        )
+            'seg_fuel_used', om.ExecComp(['seg_fuel_used=sum(fuel_used)'],
+                                         seg_fuel_used={'val': 1.0, 'units': 'kg'},
+                                         fuel_used={'val': np.ones((nn,)), 'units': 'kg'},
+        ), promotes_inputs=['*'], promotes_outputs=['*'])
 
 
 # class MissionWrapper(om.Group):
