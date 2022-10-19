@@ -127,6 +127,7 @@ class ElectricPowerElements(ArchSubSystem):
     batteries: Union[Batteries, List[Batteries]] = None
     engines_dc: Union[DCEngineChain, List[DCEngineChain]] = None
     engines_ac: Union[ACEngineChain, List[ACEngineChain]] = None
+    elec_doh: Optional[Dict[str, float]] = None
 
     def get_dv_defs(self) -> List[Tuple[str, List[str], str, Any]]:
 
@@ -147,7 +148,7 @@ class ElectricPowerElements(ArchSubSystem):
         return elec_dvs
 
     def create_electric_group(
-        self, arch: om.Group, mech_power_group: om.Group, thrust_groups: List[om.Group], nn: int
+        self, arch: om.Group, mech_power_group: om.Group, thrust_groups: List[om.Group], nn: int, phase: str
     ) -> om.Group:
         """
         Creates the electrical power generation group.
@@ -162,6 +163,7 @@ class ElectricPowerElements(ArchSubSystem):
         batteries = self.batteries
         engine_chains_dc = self.engines_dc
         engine_chains_ac = self.engines_ac
+        elec_doh = (self.elec_doh or {}).get(phase, 1.)
 
         # check inputs
         # check batteries input
@@ -225,7 +227,7 @@ class ElectricPowerElements(ArchSubSystem):
                     _, splitter_input_map = collect_inputs(
                         elec_group,
                         [
-                            ("elec_DoH", None, splitter.elec_DoH),
+                            ("elec_DoH", None, elec_doh),
                         ],
                         name="splitter_in_collect",
                     )

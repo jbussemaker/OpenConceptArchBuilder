@@ -131,7 +131,8 @@ class DynamicACModel(oc.IntegratorGroup):
     def _add_propulsion_model(self, nn):
         self.add_subsystem(
             "propmodel",
-            DynamicPropulsionArchitecture(num_nodes=nn, architecture=self.options["architecture"]),
+            DynamicPropulsionArchitecture(num_nodes=nn, architecture=self.options["architecture"],
+                                          flight_phase=self.options['flight_phase']),
             promotes_inputs=["fltcond|*", "throttle", "propulsor_active", "duration"],
             promotes_outputs=["fuel_flow", "thrust", "propulsion_system_weight"],
         )

@@ -135,6 +135,8 @@ class MechPowerElements(ArchSubSystem):
     mech_buses: Optional[Union[MechBus, List[Optional[MechBus]]]] = None
     mech_splitters: Optional[Union[MechSplitter, List[Optional[MechSplitter]]]] = None
 
+    mech_doh: Optional[Dict[str, float]] = None
+
     def get_dv_defs(self) -> List[Tuple[str, List[str], str, Any]]:
         mech_dvs = []
         if self.engines is not None and type(self.engines) == list:
@@ -153,7 +155,7 @@ class MechPowerElements(ArchSubSystem):
 
         return mech_dvs
 
-    def create_mech_group(self, arch: om.Group, thrust_groups: List[om.Group], nn: int) -> Tuple[om.Group, bool]:
+    def create_mech_group(self, arch: om.Group, thrust_groups: List[om.Group], nn: int, phase: str) -> Tuple[om.Group, bool]:
         """
         Creates the mechanical power group and returns whether electric power generation is needed.
 
@@ -168,6 +170,7 @@ class MechPowerElements(ArchSubSystem):
         inverters = self.inverters
         mech_buses = self.mech_buses
         mech_splitters = self.mech_splitters
+        mech_doh = (self.mech_doh or {}).get(phase, 1.)
 
         # check engines and motor inputs are passed as lists with n_thrust members
         if engines is not None:
@@ -397,7 +400,7 @@ class MechPowerElements(ArchSubSystem):
                 _, splitter_input_map = collect_inputs(
                     mech_thrust_group,
                     [
-                        ("mech_DoH", None, mech_splitter.mech_DoH),
+                        ("mech_DoH", None, mech_doh),
                     ],
                     name="splitter_in_collect",
                 )

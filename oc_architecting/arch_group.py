@@ -76,10 +76,12 @@ class DynamicPropulsionArchitecture(om.Group):
 
     def initialize(self):
         self.options.declare("num_nodes", default=1, desc="Number of mission analysis points to run")
+        self.options.declare("flight_phase", default=None)
         self.options.declare("architecture", types=PropSysArch, desc="The propulsion system architecture definition")
 
     def setup(self):
         nn = self.options["num_nodes"]
+        phase = self.options['flight_phase']
         arch: PropSysArch = self.options["architecture"]
 
         # Define inputs
@@ -113,7 +115,7 @@ class DynamicPropulsionArchitecture(om.Group):
         thrust_outputs += [grp.name + "." + THRUST_OUTPUT for grp in thrust_groups]
 
         # Create mechanical power generation groups: motors or engines connected to the propellers
-        mech_group, electric_power_gen_needed = arch.mech.create_mech_group(self, thrust_groups, nn)
+        mech_group, electric_power_gen_needed = arch.mech.create_mech_group(self, thrust_groups, nn, phase)
         subsys_groups += [mech_group]
 
         fuel_flow_outputs += [mech_group.name + "." + FUEL_FLOW_OUTPUT]
@@ -127,7 +129,7 @@ class DynamicPropulsionArchitecture(om.Group):
             if arch.electric is None:
                 raise RuntimeError("Electrical power generation is needed but no `ElectricPowerElements` is defined!")
 
-            elec_group = arch.electric.create_electric_group(self, mech_group, thrust_groups, nn)
+            elec_group = arch.electric.create_electric_group(self, mech_group, thrust_groups, nn, phase)
             subsys_groups += [elec_group]
 
             fuel_flow_outputs += [elec_group.name + "." + FUEL_FLOW_OUTPUT]
