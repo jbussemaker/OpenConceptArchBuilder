@@ -32,6 +32,7 @@ from openconcept.analysis.aerodynamics import PolarDrag
 from openconcept.utilities.math.integrals import Integrator
 from oc_architecting.architecture import *
 from oc_architecting.arch_group import DynamicPropulsionArchitecture
+from openmdao.api import  IndepVarComp
 
 from examples.methods.weights_twin_hybrid import (
     WingWeight_SmallTurboprop,
@@ -127,13 +128,15 @@ class DynamicACModel(oc.IntegratorGroup):
         self._add_propulsion_model(nn)
         self._add_drag_model(nn)
         self._add_weight_model(nn)
+        controls = self.add_subsystem('controls', IndepVarComp(), promotes_outputs=['*'])
+        controls.add_output('prop|rpm', val=np.ones((nn,)) * 1900, units='rpm')
 
     def _add_propulsion_model(self, nn):
         self.add_subsystem(
             "propmodel",
             DynamicPropulsionArchitecture(num_nodes=nn, architecture=self.options["architecture"],
                                           flight_phase=self.options['flight_phase']),
-            promotes_inputs=["fltcond|*", "throttle", "propulsor_active", "duration"],
+            promotes_inputs=["fltcond|*", "throttle", "propulsor_active", "duration","prop|rpm"],
             promotes_outputs=["fuel_flow", "thrust", "propulsion_system_weight"],
         )
 
