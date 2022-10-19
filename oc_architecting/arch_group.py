@@ -106,6 +106,7 @@ class DynamicPropulsionArchitecture(om.Group):
         thrust_outputs = []
         fuel_flow_outputs = []
         soc_outputs = []
+        power_outputs = []
 
         # Create thrust generation groups: propellers + gearboxes
         thrust_groups = arch.thrust.create_thrust_groups(self, nn)
@@ -119,6 +120,7 @@ class DynamicPropulsionArchitecture(om.Group):
         subsys_groups += [mech_group]
 
         fuel_flow_outputs += [mech_group.name + "." + FUEL_FLOW_OUTPUT]
+        power_outputs += [mech_group.name + "." + POWER_RATING_OUTPUT]
         weight_outputs += [mech_group.name + "." + WEIGHT_OUTPUT]
 
         order += [mech_group.name]
@@ -156,8 +158,9 @@ class DynamicPropulsionArchitecture(om.Group):
         wt_comp = create_output_sum(self, "propulsion_system_weight", weight_outputs, "kg")
         th_comp = create_output_sum(self, "thrust", thrust_outputs, "N", n=nn)
         soc_comp = create_output_sum(self, "SOC", soc_outputs, n=nn)
+        p_comp = create_output_sum(self, "power_rating", power_outputs, "kW")
 
-        order += [ff_comp.name, wt_comp.name, th_comp.name, soc_comp.name]
+        order += [ff_comp.name, wt_comp.name, th_comp.name, soc_comp.name,p_comp.name]
 
         # Define order to reduce feedback connections
         self.set_order(order)

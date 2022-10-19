@@ -69,6 +69,7 @@ __all__ = [
     "DCEngineChain",
     "ACEngineChain",
     "SOC_OUTPUT",
+    "POWER_RATING_OUTPUT",
 ]
 # any interface variables must be added here as well
 

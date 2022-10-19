@@ -47,6 +47,7 @@ __all__ = [
     "MechBus",
     "THROTTLE_INPUT",
     "ACTIVE_INPUT",
+    "POWER_RATING_OUTPUT",
 ]
 
 THROTTLE_INPUT = "throttle"
@@ -54,6 +55,7 @@ ACTIVE_INPUT = "propulsor_active"
 
 FUEL_FLOW_OUTPUT = "fuel_flow"
 ELECTRIC_POWER_OUTPUT = "motors_elec_power"
+POWER_RATING_OUTPUT = "power_rating"
 
 
 @dataclass(frozen=False)
@@ -229,6 +231,7 @@ class MechPowerElements(ArchSubSystem):
         fuel_flow_outputs = []
         weight_outputs = []
         electric_load_outputs = []
+        power_rating_outputs = []
         for i, thrust_group in enumerate(thrust_groups):
             engine, motor, inverter, mech_splitter, mech_bus, = (
                 engines[i],
@@ -280,6 +283,8 @@ class MechPowerElements(ArchSubSystem):
                 fuel_flow_outputs += [".".join([mech_thrust_group.name, eng.name, "fuel_flow"])]
                 weight_outputs += [".".join([mech_thrust_group.name, eng.name, "component_weight"])]
 
+
+
                 # define design params for motor
                 _, mot_input_map = collect_inputs(
                     mech_thrust_group,
@@ -307,6 +312,9 @@ class MechPowerElements(ArchSubSystem):
                 mech_thrust_group.connect(mot_input_map["motor_rating"], mot.name + ".elec_power_rating")
 
                 weight_outputs += [".".join([mech_thrust_group.name, mot.name, "component_weight"])]
+                if len(power_rating_outputs)==0:
+                    power_rating_outputs += [".".join([mech_thrust_group.name, eng_input_map["eng_rating"]])]
+                    power_rating_outputs += [".".join([mech_thrust_group.name, mot_input_map["motor_rating"]])]
 
                 if inverter is None:  # override if inverter is added
                     electric_load_outputs += [".".join([mech_thrust_group.name, mot.name, "elec_load"])]
@@ -522,6 +530,8 @@ class MechPowerElements(ArchSubSystem):
 
                 fuel_flow_outputs += [".".join([mech_thrust_group.name, eng.name, "fuel_flow"])]
                 weight_outputs += [".".join([mech_thrust_group.name, eng.name, "component_weight"])]
+                if len(power_rating_outputs) == 0:
+                    power_rating_outputs += [".".join([mech_thrust_group.name, eng_input_map["eng_rating"]])]
 
                 # define out_params
                 shaft_power_out_param = ".".join([mech_group.name, mech_thrust_group.name, eng.name, "shaft_power_out"])
@@ -576,6 +586,8 @@ class MechPowerElements(ArchSubSystem):
                 mech_thrust_group.connect(mot_input_map["motor_rating"], mot.name + ".elec_power_rating")
 
                 weight_outputs += [".".join([mech_thrust_group.name, mot.name, "component_weight"])]
+                if len(power_rating_outputs) == 0:
+                    power_rating_outputs += [".".join([mech_thrust_group.name, mot_input_map["motor_rating"]])]
 
                 if inverter is None:  # set electric load to motor load if no inverter is present
                     electric_load_outputs += [".".join([mech_thrust_group.name, mot.name, "elec_load"])]
@@ -631,9 +643,11 @@ class MechPowerElements(ArchSubSystem):
             arch.connect(rated_power_out_param, thrust_group.name + "." + RATED_POWER_INPUT)
 
         # Calculate output sums
+
         create_output_sum(mech_group, FUEL_FLOW_OUTPUT, fuel_flow_outputs, "kg/s", n=nn)
         create_output_sum(mech_group, WEIGHT_OUTPUT, weight_outputs, "kg")
         create_output_sum(mech_group, ELECTRIC_POWER_OUTPUT, electric_load_outputs, "kW", n=nn)
+        create_output_sum(mech_group, POWER_RATING_OUTPUT, power_rating_outputs, "kW")
 
         # Determine whether electric power generation is needed
         electric_power_needed = len(electric_load_outputs) > 0
