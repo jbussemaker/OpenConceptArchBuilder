@@ -312,9 +312,11 @@ class MechPowerElements(ArchSubSystem):
                 mech_thrust_group.connect(mot_input_map["motor_rating"], mot.name + ".elec_power_rating")
 
                 weight_outputs += [".".join([mech_thrust_group.name, mot.name, "component_weight"])]
-                if len(power_rating_outputs)==0:
-                    power_rating_outputs += [".".join([mech_thrust_group.name, eng_input_map["eng_rating"]])]
-                    power_rating_outputs += [".".join([mech_thrust_group.name, mot_input_map["motor_rating"]])]
+                if len(power_rating_outputs) == 0:
+                    power_rating_outputs += [
+                        ".".join([mech_thrust_group.name, eng_input_map["eng_rating"]]),
+                        ".".join([mech_thrust_group.name, mot_input_map["motor_rating"]]),
+                    ]
 
                 if inverter is None:  # override if inverter is added
                     electric_load_outputs += [".".join([mech_thrust_group.name, mot.name, "elec_load"])]

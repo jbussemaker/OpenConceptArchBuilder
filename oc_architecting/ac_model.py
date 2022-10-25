@@ -128,16 +128,17 @@ class DynamicACModel(oc.IntegratorGroup):
         self._add_propulsion_model(nn)
         self._add_drag_model(nn)
         self._add_weight_model(nn)
+
+    def _add_propulsion_model(self, nn):
         controls = self.add_subsystem('controls', IndepVarComp(), promotes_outputs=['*'])
         controls.add_output('prop|rpm', val=np.ones((nn,)) * 1900, units='rpm')
 
-    def _add_propulsion_model(self, nn):
         self.add_subsystem(
             "propmodel",
             DynamicPropulsionArchitecture(num_nodes=nn, architecture=self.options["architecture"],
                                           flight_phase=self.options['flight_phase']),
-            promotes_inputs=["fltcond|*", "throttle", "propulsor_active", "duration","prop|rpm"],
-            promotes_outputs=["fuel_flow", "thrust", "propulsion_system_weight","power_rating"],
+            promotes_inputs=["fltcond|*", "throttle", "propulsor_active", "duration", "prop|rpm"],
+            promotes_outputs=["fuel_flow", "thrust", "propulsion_system_weight", "power_rating"],
         )
 
     def _add_drag_model(self, nn):
