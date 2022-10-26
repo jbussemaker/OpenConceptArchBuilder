@@ -131,7 +131,7 @@ class DynamicACModel(oc.IntegratorGroup):
 
     def _add_propulsion_model(self, nn):
         controls = self.add_subsystem('controls', IndepVarComp(), promotes_outputs=['*'])
-        controls.add_output('prop|rpm', val=np.ones((nn,)) * 1900, units='rpm')
+        controls.add_output('prop|rpm', val=np.ones((nn,)) * 2500, units='rpm')
 
         self.add_subsystem(
             "propmodel",
