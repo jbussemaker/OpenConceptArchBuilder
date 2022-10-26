@@ -61,7 +61,7 @@ ELECTRIC_POWER_OUTPUT = "motors_elec_power"
 POWER_RATING_OUTPUT = "power_rating"
 WEIGHT_INPUT = 'ac|weights|MTOW'
 
-class ConversionMech(ExplicitComponent):
+class Conversion(ExplicitComponent):
 
     def setup(self):
 
@@ -69,19 +69,21 @@ class ConversionMech(ExplicitComponent):
         self.add_input('weight', units='kg')
         self.add_input('power_to_weight_ratio', units='kW')
 
-        self.add_output('engine_power', units='kW', desc='Engine power')
+        self.add_output('output_power', units='kW', desc='Engine power')
 
 
-        self.declare_partials('engine_power', 'weight')
-        self.declare_partials('engine_power', 'power_to_weight_ratio')
+        self.declare_partials('output_power', 'weight')
+        self.declare_partials('output_power', 'power_to_weight_ratio')
 
 
     def compute(self, inputs, outputs):
-        outputs['engine_power'] = inputs['power_to_weight_ratio'] * inputs['weight']
+        outputs['output_power'] = inputs['power_to_weight_ratio'] * inputs['weight']
 
     def compute_partials(self, inputs, J):
-        J['engine_power', 'weight'] = inputs['power_to_weight_ratio']
-        J['engine_power', 'power_to_weight_ratio'] = inputs['weight']
+        J['output_power', 'weight'] = inputs['power_to_weight_ratio']
+        J['output_power', 'power_to_weight_ratio'] = inputs['weight']
+
+
 
 @dataclass(frozen=False)
 class Engine(ArchElement):
@@ -303,8 +305,16 @@ class MechPowerElements(ArchSubSystem):
                         weight_base=engine.base_weight,
                     ),
                 )
+                conv_mech = mech_thrust_group.add_subsystem(
+                    'conversion_mech',
+                    Conversion(
+                    ),
+                )
+                weight_param = ".".join([mech_thrust_group.name, "conversion_mech", "weight"])
+                mech_group.connect(input_map[WEIGHT_INPUT], weight_param)
+                mech_thrust_group.connect(eng_input_map["eng_rating"], 'conversion_mech' + ".power_to_weight_ratio")
 
-                mech_thrust_group.connect(eng_input_map["eng_rating"], eng.name + ".shaft_power_rating")
+                mech_thrust_group.connect(conv_mech.name + ".output_power", eng.name + ".shaft_power_rating")
 
                 fuel_flow_outputs += [".".join([mech_thrust_group.name, eng.name, "fuel_flow"])]
                 weight_outputs += [".".join([mech_thrust_group.name, eng.name, "component_weight"])]
@@ -334,14 +344,22 @@ class MechPowerElements(ArchSubSystem):
                         cost_base=motor.cost_base,
                     ),
                 )
+                conv_elec = mech_thrust_group.add_subsystem(
+                    'conversion_elec',
+                    Conversion(
+                    ),
+                )
+                weight_param = ".".join([mech_thrust_group.name, "conversion_elec", "weight"])
+                mech_group.connect(input_map[WEIGHT_INPUT], weight_param)
+                mech_thrust_group.connect(mot_input_map["motor_rating"], 'conversion_elec' + ".power_to_weight_ratio")
 
-                mech_thrust_group.connect(mot_input_map["motor_rating"], mot.name + ".elec_power_rating")
+                mech_thrust_group.connect(conv_elec.name + ".output_power", mot.name + ".elec_power_rating")
 
                 weight_outputs += [".".join([mech_thrust_group.name, mot.name, "component_weight"])]
                 if len(power_rating_outputs) == 0:
                     power_rating_outputs += [
-                        ".".join([mech_thrust_group.name, eng_input_map["eng_rating"]]),
-                        ".".join([mech_thrust_group.name, mot_input_map["motor_rating"]]),
+                        ".".join([mech_thrust_group.name, conv_mech.name + ".output_power"]),
+                        ".".join([mech_thrust_group.name, conv_elec.name + ".output_power"]),
                     ]
 
                 if inverter is None:  # override if inverter is added
@@ -372,8 +390,8 @@ class MechPowerElements(ArchSubSystem):
                         motor_rated_power={"val": 1.0, "units": "kW"},
                     )
                     mech_thrust_group.add_subsystem("sum_rated_power", subsys=sum_rated_power)
-                    mech_thrust_group.connect(eng_input_map["eng_rating"], "sum_rated_power" + ".engine_rated_power")
-                    mech_thrust_group.connect(mot_input_map["motor_rating"], "sum_rated_power" + ".motor_rated_power")
+                    mech_thrust_group.connect(conv_mech.name + ".output_power", "sum_rated_power" + ".engine_rated_power")
+                    mech_thrust_group.connect(conv_elec.name + ".output_power", "sum_rated_power" + ".motor_rated_power")
                     mech_thrust_group.connect(mot_input_map["motor_efficiency"], "sum_rated_power" + ".motor_eff")
                     mech_thrust_group.connect(
                         "scalify_active_input" + "." + ACTIVE_INPUT + "_scalar", "sum_rated_power" + ".active_flag"
@@ -389,8 +407,8 @@ class MechPowerElements(ArchSubSystem):
                         motor_rated_power={"val": 1.0, "units": "kW"},
                     )
                     mech_thrust_group.add_subsystem("sum_rated_power", subsys=sum_rated_power)
-                    mech_thrust_group.connect(eng_input_map["eng_rating"], "sum_rated_power" + ".engine_rated_power")
-                    mech_thrust_group.connect(mot_input_map["motor_rating"], "sum_rated_power" + ".motor_rated_power")
+                    mech_thrust_group.connect(conv_mech.name + ".output_power", "sum_rated_power" + ".engine_rated_power")
+                    mech_thrust_group.connect(conv_elec.name + ".output_power", "sum_rated_power" + ".motor_rated_power")
                     mech_thrust_group.connect(mot_input_map["motor_efficiency"], "sum_rated_power" + ".motor_eff")
 
                 # add rated powers of eng and motor for sizing
@@ -402,10 +420,10 @@ class MechPowerElements(ArchSubSystem):
                 )
                 mech_thrust_group.add_subsystem("sizing_rated_power", subsys=sizing_rated_power)
                 mech_thrust_group.connect(
-                    eng_input_map["eng_rating"], "sizing_rated_power" + "." + eng.name + "_rated_power"
+                    conv_mech.name + ".output_power", "sizing_rated_power" + "." + eng.name + "_rated_power"
                 )
                 mech_thrust_group.connect(
-                    mot_input_map["motor_rating"], "sizing_rated_power" + "." + mot.name + "_rated_power"
+                    conv_elec.name, "sizing_rated_power" + "." + mot.name + "_rated_power"
                 )
 
                 # get total shaft power output of (engine + motor) system
@@ -554,29 +572,29 @@ class MechPowerElements(ArchSubSystem):
                     ),
                 )
 
-                conv = mech_thrust_group.add_subsystem(
-                    'conversion',
-                    ConversionMech(
+                conv_mech = mech_thrust_group.add_subsystem(
+                    'conversion_mech',
+                    Conversion(
                     ),
                 )
-                weight_param = ".".join([mech_thrust_group.name, "conversion", "weight"])
+                weight_param = ".".join([mech_thrust_group.name, "conversion_mech", "weight"])
                 mech_group.connect(input_map[WEIGHT_INPUT], weight_param)
-                mech_thrust_group.connect(eng_input_map["eng_rating"], 'conversion' + ".power_to_weight_ratio")
+                mech_thrust_group.connect(eng_input_map["eng_rating"], 'conversion_mech' + ".power_to_weight_ratio")
 
 
-                mech_thrust_group.connect(conv.name + ".engine_power", eng.name + ".shaft_power_rating")
+                mech_thrust_group.connect(conv_mech.name + ".output_power", eng.name + ".shaft_power_rating")
 
                 fuel_flow_outputs += [".".join([mech_thrust_group.name, eng.name, "fuel_flow"])]
                 weight_outputs += [".".join([mech_thrust_group.name, eng.name, "component_weight"])]
                 if len(power_rating_outputs) == 0:
-                    power_rating_outputs += [".".join([mech_thrust_group.name, conv.name + ".engine_power"])]
+                    power_rating_outputs += [".".join([mech_thrust_group.name, conv_mech.name + ".output_power"])]
 
                 # define out_params
                 shaft_power_out_param = ".".join([mech_group.name, mech_thrust_group.name, eng.name, "shaft_power_out"])
                 shaft_speed_out_param = ".".join(
                     [mech_group.name, mech_thrust_group.name, eng_input_map["eng_output_rpm"]]
                 )
-                rated_power_out_param = ".".join([mech_group.name, mech_thrust_group.name, conv.name + ".engine_power"])
+                rated_power_out_param = ".".join([mech_group.name, mech_thrust_group.name, conv_mech.name + ".output_power"])
 
                 # define throttle parameter in case of one engine inoperative OEI or Normal
                 if i == 1:  # in the case of OEI, for mech2, connect throttle to failedengine
@@ -620,12 +638,20 @@ class MechPowerElements(ArchSubSystem):
                         cost_base=motor.cost_base,
                     ),
                 )
+                conv_elec = mech_thrust_group.add_subsystem(
+                    'conversion_elec',
+                    Conversion(
+                    ),
+                )
+                weight_param = ".".join([mech_thrust_group.name, "conversion_elec", "weight"])
+                mech_group.connect(input_map[WEIGHT_INPUT], weight_param)
+                mech_thrust_group.connect(mot_input_map["motor_rating"], 'conversion_elec' + ".power_to_weight_ratio")
 
-                mech_thrust_group.connect(mot_input_map["motor_rating"], mot.name + ".elec_power_rating")
+                mech_thrust_group.connect(conv_elec.name + ".output_power", mot.name + ".elec_power_rating")
 
                 weight_outputs += [".".join([mech_thrust_group.name, mot.name, "component_weight"])]
                 if len(power_rating_outputs) == 0:
-                    power_rating_outputs += [".".join([mech_thrust_group.name, mot_input_map["motor_rating"]])]
+                    power_rating_outputs += [".".join([mech_thrust_group.name, conv_elec.name + ".output_power"])]
 
                 if inverter is None:  # set electric load to motor load if no inverter is present
                     electric_load_outputs += [".".join([mech_thrust_group.name, mot.name, "elec_load"])]
@@ -636,7 +662,7 @@ class MechPowerElements(ArchSubSystem):
                     [mech_group.name, mech_thrust_group.name, mot_input_map["motor_output_rpm"]]
                 )
                 rated_power_out_param = ".".join(
-                    [mech_group.name, mech_thrust_group.name, mot_input_map["motor_rating"]]
+                    [mech_group.name, mech_thrust_group.name, conv_elec.name + ".output_power"]
                 )
 
                 # define throttle parameter in case of one motor inoperative OEI or Normal
@@ -667,7 +693,7 @@ class MechPowerElements(ArchSubSystem):
                     # override electric load to get it from inverter
                     electric_load_outputs += [".".join([mech_thrust_group.name, invert.name, "elec_power_in"])]
 
-                    mech_thrust_group.connect(mot_input_map["motor_rating"], invert.name + ".elec_power_rating")
+                    mech_thrust_group.connect(conv_elec.name + ".output_power", invert.name + ".elec_power_rating")
                     mech_thrust_group.connect(mot.name + ".elec_load", invert.name + ".elec_power_out")
 
             # Connect throttle input
