@@ -35,6 +35,8 @@ from oc_architecting.elements.thrust import *
 from openconcept.components import SimpleTurboshaft, SimpleMotor, PowerSplit
 from oc_architecting.components import SimpleConverterInverted, SimpleMechBus
 from openconcept.utilities.math import AddSubtractComp, ElementMultiplyDivideComp
+from openmdao.api import ExplicitComponent
+
 
 __all__ = [
     "MechPowerElements",
@@ -48,6 +50,7 @@ __all__ = [
     "THROTTLE_INPUT",
     "ACTIVE_INPUT",
     "POWER_RATING_OUTPUT",
+    "WEIGHT_INPUT",
 ]
 
 THROTTLE_INPUT = "throttle"
@@ -56,7 +59,29 @@ ACTIVE_INPUT = "propulsor_active"
 FUEL_FLOW_OUTPUT = "fuel_flow"
 ELECTRIC_POWER_OUTPUT = "motors_elec_power"
 POWER_RATING_OUTPUT = "power_rating"
+WEIGHT_INPUT = 'ac|weights|MTOW'
 
+class ConversionMech(ExplicitComponent):
+
+    def setup(self):
+
+
+        self.add_input('weight', units='kg')
+        self.add_input('power_to_weight_ratio', units='kW')
+
+        self.add_output('engine_power', units='kW', desc='Engine power')
+
+
+        self.declare_partials('engine_power', 'weight')
+        self.declare_partials('engine_power', 'power_to_weight_ratio')
+
+
+    def compute(self, inputs, outputs):
+        outputs['engine_power'] = inputs['power_to_weight_ratio'] * inputs['weight']
+
+    def compute_partials(self, inputs, J):
+        J['engine_power', 'weight'] = inputs['power_to_weight_ratio']
+        J['engine_power', 'power_to_weight_ratio'] = inputs['weight']
 
 @dataclass(frozen=False)
 class Engine(ArchElement):
@@ -223,6 +248,7 @@ class MechPowerElements(ArchSubSystem):
                 (ACTIVE_INPUT, None, np.tile(1.0, nn)),
                 (FLTCOND_RHO_INPUT, "kg/m**3", np.tile(1.225, nn)),
                 (FLTCOND_TAS_INPUT, "m/s", np.tile(100.0, nn)),
+                (WEIGHT_INPUT, "kg", 1.0),
             ],
             name="mech_in_collect",
         )
@@ -528,19 +554,29 @@ class MechPowerElements(ArchSubSystem):
                     ),
                 )
 
-                mech_thrust_group.connect(eng_input_map["eng_rating"], eng.name + ".shaft_power_rating")
+                conv = mech_thrust_group.add_subsystem(
+                    'conversion',
+                    ConversionMech(
+                    ),
+                )
+                weight_param = ".".join([mech_thrust_group.name, "conversion", "weight"])
+                mech_group.connect(input_map[WEIGHT_INPUT], weight_param)
+                mech_thrust_group.connect(eng_input_map["eng_rating"], 'conversion' + ".power_to_weight_ratio")
+
+
+                mech_thrust_group.connect(conv.name + ".engine_power", eng.name + ".shaft_power_rating")
 
                 fuel_flow_outputs += [".".join([mech_thrust_group.name, eng.name, "fuel_flow"])]
                 weight_outputs += [".".join([mech_thrust_group.name, eng.name, "component_weight"])]
                 if len(power_rating_outputs) == 0:
-                    power_rating_outputs += [".".join([mech_thrust_group.name, eng_input_map["eng_rating"]])]
+                    power_rating_outputs += [".".join([mech_thrust_group.name, conv.name + ".engine_power"])]
 
                 # define out_params
                 shaft_power_out_param = ".".join([mech_group.name, mech_thrust_group.name, eng.name, "shaft_power_out"])
                 shaft_speed_out_param = ".".join(
                     [mech_group.name, mech_thrust_group.name, eng_input_map["eng_output_rpm"]]
                 )
-                rated_power_out_param = ".".join([mech_group.name, mech_thrust_group.name, eng_input_map["eng_rating"]])
+                rated_power_out_param = ".".join([mech_group.name, mech_thrust_group.name, conv.name + ".engine_power"])
 
                 # define throttle parameter in case of one engine inoperative OEI or Normal
                 if i == 1:  # in the case of OEI, for mech2, connect throttle to failedengine
