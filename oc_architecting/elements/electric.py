@@ -80,7 +80,7 @@ class Batteries(ArchElement):
 
     weight: float = 1000.0  # kg
     specific_power: float = 5000  # W/kg
-    specific_energy: float = 800  # W/kg
+    specific_energy: float = 1100  # W/kg
     efficiency: float = 0.97
     cost_inc: float = 50.0  # $ per kg
     cost_base: float = 1.0  # $ per base
