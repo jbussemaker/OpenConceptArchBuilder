@@ -423,7 +423,7 @@ class MechPowerElements(ArchSubSystem):
                     conv_mech.name + ".output_power", "sizing_rated_power" + "." + eng.name + "_rated_power"
                 )
                 mech_thrust_group.connect(
-                    conv_elec.name, "sizing_rated_power" + "." + mot.name + "_rated_power"
+                    conv_elec.name + ".output_power", "sizing_rated_power" + "." + mot.name + "_rated_power"
                 )
 
                 # get total shaft power output of (engine + motor) system
