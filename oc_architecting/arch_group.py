@@ -96,6 +96,7 @@ class DynamicPropulsionArchitecture(om.Group):
                 (ACTIVE_INPUT, None, np.tile(1.0, nn)),
                 (FLTCOND_RHO_INPUT, "kg/m**3", np.tile(1.225, nn)),
                 (FLTCOND_TAS_INPUT, "m/s", np.tile(100.0, nn)),
+                (WEIGHT_INPUT, "kg", 1.0),
             ],
             name="propmodel_in_collect",
         )
@@ -148,6 +149,7 @@ class DynamicPropulsionArchitecture(om.Group):
         _connect_input(RPM_INPUT, thrust_groups)
         _connect_input(THROTTLE_INPUT, [mech_group])
         _connect_input(ACTIVE_INPUT, [mech_group])
+        _connect_input(WEIGHT_INPUT, [mech_group])
 
         _connect_input(DURATION_INPUT, subsys_groups)
         _connect_input(FLTCOND_RHO_INPUT, subsys_groups)

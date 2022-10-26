@@ -137,7 +137,7 @@ class DynamicACModel(oc.IntegratorGroup):
             "propmodel",
             DynamicPropulsionArchitecture(num_nodes=nn, architecture=self.options["architecture"],
                                           flight_phase=self.options['flight_phase']),
-            promotes_inputs=["fltcond|*", "throttle", "propulsor_active", "duration", "prop|rpm"],
+            promotes_inputs=["fltcond|*", "throttle", "propulsor_active", "duration", "prop|rpm",'ac|weights|MTOW'],
             promotes_outputs=["fuel_flow", "thrust", "propulsion_system_weight", "power_rating"],
         )
 
