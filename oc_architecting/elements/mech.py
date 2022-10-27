@@ -67,7 +67,7 @@ class Conversion(ExplicitComponent):
 
 
         self.add_input('weight', units='kg')
-        self.add_input('power_to_weight_ratio', units='kW')
+        self.add_input('power_to_weight_ratio', units='kW/kg')
 
         self.add_output('output_power', units='kW', desc='Engine power')
 
@@ -170,11 +170,11 @@ class MechPowerElements(ArchSubSystem):
         mech_dvs = []
         if self.engines is not None and type(self.engines) == list:
             eng_rating_paths = ["mech.mech%d.eng_rating" % (i + 1,) for i in range(len(self.engines))]
-            mech_dvs += (("ac|propulsion|mech_engine|rating", eng_rating_paths, "kW", self.engines[0].power_rating),)
+            mech_dvs += (("ac|propulsion|mech_engine|rating", eng_rating_paths, "kW/kg", self.engines[0].power_rating),)
 
         if self.motors is not None and type(self.motors) == list:
             motor_rating_paths = ["mech.mech%d.motor_rating" % (i + 1,) for i in range(len(self.motors))]
-            mech_dvs += (("ac|propulsion|motor|rating", motor_rating_paths, "kW", self.motors[0].power_rating),)
+            mech_dvs += (("ac|propulsion|motor|rating", motor_rating_paths, "kW/kg", self.motors[0].power_rating),)
 
         # if self.engines is not None and self.motors is not None:
         #     if self.mech_splitters is not None:
@@ -290,7 +290,7 @@ class MechPowerElements(ArchSubSystem):
                 _, eng_input_map = collect_inputs(
                     mech_thrust_group,
                     [
-                        ("eng_rating", "kW", engine.power_rating),
+                        ("eng_rating", "kW/kg", engine.power_rating),
                         ("eng_output_rpm", "rpm", engine.output_rpm),
                     ],
                     name="eng_in_collect",
@@ -325,7 +325,7 @@ class MechPowerElements(ArchSubSystem):
                 _, mot_input_map = collect_inputs(
                     mech_thrust_group,
                     [
-                        ("motor_rating", "kW", motor.power_rating),
+                        ("motor_rating", "kW/kg", motor.power_rating),
                         ("motor_output_rpm", "rpm", motor.output_rpm),
                         ("motor_efficiency", None, motor.efficiency),
                     ],
@@ -544,7 +544,7 @@ class MechPowerElements(ArchSubSystem):
                 _, eng_input_map = collect_inputs(
                     mech_thrust_group,
                     [
-                        ("eng_rating", "kW", engine.power_rating),
+                        ("eng_rating", "kW/kg", engine.power_rating),
                         ("eng_output_rpm", "rpm", engine.output_rpm),
                     ],
                     name="eng_in_collect",
@@ -609,7 +609,7 @@ class MechPowerElements(ArchSubSystem):
                 _, mot_input_map = collect_inputs(
                     mech_thrust_group,
                     [
-                        ("motor_rating", "kW", motor.power_rating),
+                        ("motor_rating", "kW/kg", motor.power_rating),
                         ("motor_output_rpm", "rpm", motor.output_rpm),
                     ],
                     name="motor_in_collect",
