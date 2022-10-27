@@ -35,6 +35,7 @@ from oc_architecting.elements.mech import *
 from openconcept.components.battery import SOCBattery
 from openconcept.components import SimpleTurboshaft, SimpleGenerator, PowerSplit
 from oc_architecting.components import SimpleConverter, SimpleDCBusInverted
+from oc_architecting.elements.mech import Conversion
 
 __all__ = [
     "ElectricPowerElements",
@@ -48,9 +49,11 @@ __all__ = [
     "ElecSplitter",
     "FUEL_FLOW_OUTPUT",
     "SOC_OUTPUT",
+    "WEIGHT_INPUT",
 ]
 
 SOC_OUTPUT = "SOC"
+WEIGHT_INPUT = 'ac|weights|MTOW'
 
 
 @dataclass(frozen=False)
@@ -139,7 +142,7 @@ class ElectricPowerElements(ArchSubSystem):
         if self.engines_dc is not None and type(self.engines_dc) != list:
             elec_eng_paths = ["elec.eng_rating"]
             eng, gen, rect = self.engines_dc
-            elec_dvs += (("ac|propulsion|elec_engine|rating", elec_eng_paths, "kW", eng.power_rating),)
+            elec_dvs += (("ac|propulsion|elec_engine|rating", elec_eng_paths, "kW/kg", eng.power_rating),)
 
         # if self.splitter is not None:
         #     elec_doh_paths = ['elec.elec_DoH']
@@ -203,6 +206,7 @@ class ElectricPowerElements(ArchSubSystem):
                 (DURATION_INPUT, "s", 1.0),
                 (FLTCOND_RHO_INPUT, "kg/m**3", np.tile(1.225, nn)),
                 (FLTCOND_TAS_INPUT, "m/s", np.tile(100.0, nn)),
+                (WEIGHT_INPUT, "kg", 1.0),
             ],
             name="elec_in_collect",
         )
@@ -304,7 +308,7 @@ class ElectricPowerElements(ArchSubSystem):
             _, eng_input_map = collect_inputs(
                 elec_group,
                 [
-                    ("eng_rating", "kW", engine.power_rating),
+                    ("eng_rating", "kW/kg", engine.power_rating),
                     ("eng_output_rpm", "rpm", engine.output_rpm),
                 ],
                 name="eng_in_collect",
@@ -320,11 +324,18 @@ class ElectricPowerElements(ArchSubSystem):
                     weight_base=engine.base_weight,
                 ),
             )
+            conv_mech = elec_group.add_subsystem(
+                'conversion_mech',
+                Conversion(
+                ),
+            )
+            elec_group.connect(input_map[WEIGHT_INPUT],'conversion_mech.weight')
+            elec_group.connect(eng_input_map["eng_rating"], 'conversion_mech' + ".power_to_weight_ratio")
             # track weight and fuel
             fuel_flow_outputs += [".".join([eng.name, "fuel_flow"])]
             weight_outputs += [".".join([eng.name, "component_weight"])]
 
-            elec_group.connect(eng_input_map["eng_rating"], eng.name + ".shaft_power_rating")
+            elec_group.connect(conv_mech.name + ".output_power", eng.name + ".shaft_power_rating")
 
             # add generator component
             gen = elec_group.add_subsystem(
@@ -341,7 +352,7 @@ class ElectricPowerElements(ArchSubSystem):
             # track weight
             weight_outputs += [".".join([gen.name, "component_weight"])]
             # connect variables
-            elec_group.connect(eng_input_map["eng_rating"], gen.name + ".elec_power_rating")
+            elec_group.connect(conv_mech.name + ".output_power", gen.name + ".elec_power_rating")
             elec_group.connect(eng.name + ".shaft_power_out", gen.name + ".shaft_power_in")
 
             # add rectifier component
@@ -360,7 +371,7 @@ class ElectricPowerElements(ArchSubSystem):
             # track weight
             weight_outputs += [".".join([rect.name, "component_weight"])]
             # connect variables
-            elec_group.connect(eng_input_map["eng_rating"], rect.name + ".elec_power_rating")
+            elec_group.connect(conv_mech.name + ".output_power", rect.name + ".elec_power_rating")
             elec_group.connect(gen.name + ".elec_power_out", rect.name + ".elec_power_in")
 
             # available output power of engine chain

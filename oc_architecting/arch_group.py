@@ -150,6 +150,7 @@ class DynamicPropulsionArchitecture(om.Group):
         _connect_input(THROTTLE_INPUT, [mech_group])
         _connect_input(ACTIVE_INPUT, [mech_group])
         _connect_input(WEIGHT_INPUT, [mech_group])
+        _connect_input(WEIGHT_INPUT, [elec_group])
 
         _connect_input(DURATION_INPUT, subsys_groups)
         _connect_input(FLTCOND_RHO_INPUT, subsys_groups)
