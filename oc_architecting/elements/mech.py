@@ -61,27 +61,6 @@ ELECTRIC_POWER_OUTPUT = "motors_elec_power"
 POWER_RATING_OUTPUT = "power_rating"
 WEIGHT_INPUT = 'ac|weights|MTOW'
 
-class Conversion(ExplicitComponent):
-
-    def setup(self):
-
-
-        self.add_input('weight', units='kg')
-        self.add_input('power_to_weight_ratio', units='kW/kg')
-
-        self.add_output('output_power', units='kW', desc='Engine power')
-
-
-        self.declare_partials('output_power', 'weight')
-        self.declare_partials('output_power', 'power_to_weight_ratio')
-
-
-    def compute(self, inputs, outputs):
-        outputs['output_power'] = inputs['power_to_weight_ratio'] * inputs['weight']
-
-    def compute_partials(self, inputs, J):
-        J['output_power', 'weight'] = inputs['power_to_weight_ratio']
-        J['output_power', 'power_to_weight_ratio'] = inputs['weight']
 
 
 
@@ -307,12 +286,14 @@ class MechPowerElements(ArchSubSystem):
                 )
                 conv_mech = mech_thrust_group.add_subsystem(
                     'conversion_mech',
-                    Conversion(
-                    ),
+                    om.ExecComp(['output_power = power_to_weight_ratio*weight'],
+                                weight={'value': 1.0, 'units': 'kg'},
+                                power_to_weight_ratio={'value': 1.0, 'units': 'kW/kg'},
+                                output_power={'value': 1.0, 'units': 'kW'})
                 )
-                weight_param = ".".join([mech_thrust_group.name, "conversion_mech", "weight"])
+                weight_param = ".".join([mech_thrust_group.name, conv_mech.name, "weight"])
                 mech_group.connect(input_map[WEIGHT_INPUT], weight_param)
-                mech_thrust_group.connect(eng_input_map["eng_rating"], 'conversion_mech' + ".power_to_weight_ratio")
+                mech_thrust_group.connect(eng_input_map["eng_rating"], conv_mech.name + ".power_to_weight_ratio")
 
                 mech_thrust_group.connect(conv_mech.name + ".output_power", eng.name + ".shaft_power_rating")
 
@@ -346,12 +327,14 @@ class MechPowerElements(ArchSubSystem):
                 )
                 conv_elec = mech_thrust_group.add_subsystem(
                     'conversion_elec',
-                    Conversion(
-                    ),
+                    om.ExecComp(['output_power = power_to_weight_ratio*weight'],
+                                weight={'value': 1.0, 'units': 'kg'},
+                                power_to_weight_ratio={'value': 1.0, 'units': 'kW/kg'},
+                                output_power={'value': 1.0, 'units': 'kW'})
                 )
-                weight_param = ".".join([mech_thrust_group.name, "conversion_elec", "weight"])
+                weight_param = ".".join([mech_thrust_group.name, conv_elec.name, "weight"])
                 mech_group.connect(input_map[WEIGHT_INPUT], weight_param)
-                mech_thrust_group.connect(mot_input_map["motor_rating"], 'conversion_elec' + ".power_to_weight_ratio")
+                mech_thrust_group.connect(mot_input_map["motor_rating"], conv_elec.name + ".power_to_weight_ratio")
 
                 mech_thrust_group.connect(conv_elec.name + ".output_power", mot.name + ".elec_power_rating")
 
@@ -574,12 +557,14 @@ class MechPowerElements(ArchSubSystem):
 
                 conv_mech = mech_thrust_group.add_subsystem(
                     'conversion_mech',
-                    Conversion(
-                    ),
+                    om.ExecComp(['output_power = power_to_weight_ratio*weight'],
+                                weight={'value': 1.0, 'units': 'kg'},
+                                power_to_weight_ratio={'value': 1.0, 'units': 'kW/kg'},
+                                output_power={'value': 1.0, 'units': 'kW'})
                 )
-                weight_param = ".".join([mech_thrust_group.name, "conversion_mech", "weight"])
+                weight_param = ".".join([mech_thrust_group.name, conv_mech.name, "weight"])
                 mech_group.connect(input_map[WEIGHT_INPUT], weight_param)
-                mech_thrust_group.connect(eng_input_map["eng_rating"], 'conversion_mech' + ".power_to_weight_ratio")
+                mech_thrust_group.connect(eng_input_map["eng_rating"], conv_mech.name + ".power_to_weight_ratio")
 
 
                 mech_thrust_group.connect(conv_mech.name + ".output_power", eng.name + ".shaft_power_rating")
@@ -640,12 +625,14 @@ class MechPowerElements(ArchSubSystem):
                 )
                 conv_elec = mech_thrust_group.add_subsystem(
                     'conversion_elec',
-                    Conversion(
-                    ),
+                    om.ExecComp(['output_power = power_to_weight_ratio*weight'],
+                                weight={'value': 1.0, 'units': 'kg'},
+                                power_to_weight_ratio={'value': 1.0, 'units': 'kW/kg'},
+                                output_power={'value': 1.0, 'units': 'kW'})
                 )
-                weight_param = ".".join([mech_thrust_group.name, "conversion_elec", "weight"])
+                weight_param = ".".join([mech_thrust_group.name, conv_elec.name, "weight"])
                 mech_group.connect(input_map[WEIGHT_INPUT], weight_param)
-                mech_thrust_group.connect(mot_input_map["motor_rating"], 'conversion_elec' + ".power_to_weight_ratio")
+                mech_thrust_group.connect(mot_input_map["motor_rating"], conv_elec.name + ".power_to_weight_ratio")
 
                 mech_thrust_group.connect(conv_elec.name + ".output_power", mot.name + ".elec_power_rating")
 

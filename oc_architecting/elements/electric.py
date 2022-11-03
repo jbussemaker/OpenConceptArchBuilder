@@ -35,7 +35,7 @@ from oc_architecting.elements.mech import *
 from openconcept.components.battery import SOCBattery
 from openconcept.components import SimpleTurboshaft, SimpleGenerator, PowerSplit
 from oc_architecting.components import SimpleConverter, SimpleDCBusInverted
-from oc_architecting.elements.mech import Conversion
+
 
 __all__ = [
     "ElectricPowerElements",
@@ -83,7 +83,7 @@ class Batteries(ArchElement):
 
     weight: float = 1000.0  # kg
     specific_power: float = 5000  # W/kg
-    specific_energy: float = 1100  # W/kg
+    specific_energy: float = 1200  # W/kg
     efficiency: float = 0.97
     cost_inc: float = 50.0  # $ per kg
     cost_base: float = 1.0  # $ per base
@@ -324,18 +324,20 @@ class ElectricPowerElements(ArchSubSystem):
                     weight_base=engine.base_weight,
                 ),
             )
-            conv_mech = elec_group.add_subsystem(
-                'conversion_mech',
-                Conversion(
-                ),
+            conv_elec = elec_group.add_subsystem(
+                'conversion_elec',
+                om.ExecComp(['output_power = power_to_weight_ratio*weight'],
+                            weight={'value': 1.0, 'units': 'kg'},
+                            power_to_weight_ratio={'value': 1.0, 'units': 'kW/kg'},
+                            output_power={'value': 1.0, 'units': 'kW'})
             )
-            elec_group.connect(input_map[WEIGHT_INPUT],'conversion_mech.weight')
-            elec_group.connect(eng_input_map["eng_rating"], 'conversion_mech' + ".power_to_weight_ratio")
+            elec_group.connect(input_map[WEIGHT_INPUT],'conversion_elec.weight')
+            elec_group.connect(eng_input_map["eng_rating"], conv_elec.name + ".power_to_weight_ratio")
             # track weight and fuel
             fuel_flow_outputs += [".".join([eng.name, "fuel_flow"])]
             weight_outputs += [".".join([eng.name, "component_weight"])]
 
-            elec_group.connect(conv_mech.name + ".output_power", eng.name + ".shaft_power_rating")
+            elec_group.connect(conv_elec.name + ".output_power", eng.name + ".shaft_power_rating")
 
             # add generator component
             gen = elec_group.add_subsystem(
@@ -352,7 +354,7 @@ class ElectricPowerElements(ArchSubSystem):
             # track weight
             weight_outputs += [".".join([gen.name, "component_weight"])]
             # connect variables
-            elec_group.connect(conv_mech.name + ".output_power", gen.name + ".elec_power_rating")
+            elec_group.connect(conv_elec.name + ".output_power", gen.name + ".elec_power_rating")
             elec_group.connect(eng.name + ".shaft_power_out", gen.name + ".shaft_power_in")
 
             # add rectifier component
@@ -371,7 +373,7 @@ class ElectricPowerElements(ArchSubSystem):
             # track weight
             weight_outputs += [".".join([rect.name, "component_weight"])]
             # connect variables
-            elec_group.connect(conv_mech.name + ".output_power", rect.name + ".elec_power_rating")
+            elec_group.connect(conv_elec.name + ".output_power", rect.name + ".elec_power_rating")
             elec_group.connect(gen.name + ".elec_power_out", rect.name + ".elec_power_in")
 
             # available output power of engine chain
