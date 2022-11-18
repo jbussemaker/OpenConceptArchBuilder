@@ -137,6 +137,7 @@ class ThrustGenElements(ArchSubSystem):
             )
             order = [input_comp.name]
 
+            prop.blades=int(prop.blades)
             # Create propeller
             prop_sys = thrust_group.add_subsystem(
                 prop.name,
