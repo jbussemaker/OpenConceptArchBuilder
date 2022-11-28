@@ -133,6 +133,9 @@ class DynamicACModel(oc.IntegratorGroup):
         controls = self.add_subsystem('controls', IndepVarComp(), promotes_outputs=['*'])
         controls.add_output('prop|rpm', val=np.ones((nn,)) * 2500, units='rpm')
 
+        n_engines = self.add_subsystem('number_of_engines', IndepVarComp(), promotes_outputs=['*'])
+        n_engines.add_output('number_of_engines', val=len(self.options["architecture"].thrust.propellers))
+
         self.add_subsystem(
             "propmodel",
             DynamicPropulsionArchitecture(num_nodes=nn, architecture=self.options["architecture"],
