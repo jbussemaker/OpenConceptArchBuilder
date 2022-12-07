@@ -147,12 +147,18 @@ class MechPowerElements(ArchSubSystem):
 
     def get_dv_defs(self) -> List[Tuple[str, List[str], str, Any]]:
         mech_dvs = []
+        eng_rating_paths=[]
+        motor_rating_paths=[]
         if self.engines is not None and type(self.engines) == list:
-            eng_rating_paths = ["mech.mech%d.eng_rating" % (i + 1,) for i in range(len(self.engines))]
+            for i in range(len(self.engines)):
+                if self.engines[i] is not None:
+                    eng_rating_paths.append("mech.mech%d.eng_rating" % (i + 1,))
             mech_dvs += (("ac|propulsion|mech_engine|rating", eng_rating_paths, "kW/kg", self.engines[0].power_rating),)
 
         if self.motors is not None and type(self.motors) == list:
-            motor_rating_paths = ["mech.mech%d.motor_rating" % (i + 1,) for i in range(len(self.motors))]
+            for i in range(len(self.motors)):
+                if self.motors[i] is not None:
+                    motor_rating_paths.append("mech.mech%d.motor_rating" % (i + 1,))
             mech_dvs += (("ac|propulsion|motor|rating", motor_rating_paths, "kW/kg", self.motors[0].power_rating),)
 
         # if self.engines is not None and self.motors is not None:
