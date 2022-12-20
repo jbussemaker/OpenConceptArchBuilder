@@ -144,8 +144,11 @@ class MechPowerElements(ArchSubSystem):
     mech_splitters: Optional[Union[MechSplitter, List[Optional[MechSplitter]]]] = None
 
     mech_doh: Optional[Dict[str, float]] = None
-
     def get_dv_defs(self) -> List[Tuple[str, List[str], str, Any]]:
+        if all(v is None for v in self.motors):
+            self.motors = None
+        if all(v is None for v in self.engines):
+            self.engines = None
         mech_dvs = []
         eng_rating_paths=[]
         motor_rating_paths=[]
