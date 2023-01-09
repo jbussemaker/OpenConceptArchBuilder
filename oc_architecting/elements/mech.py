@@ -156,15 +156,15 @@ class MechPowerElements(ArchSubSystem):
             for i in range(len(self.engines)):
                 if self.engines[i] is not None:
                     eng_rating_paths.append("mech.mech%d.eng_rating" % (i + 1,))
-                    aux_eng=i
-            mech_dvs += (("ac|propulsion|mech_engine|rating", eng_rating_paths, "kW/kg", self.engines[aux_eng].power_rating),)
+                    first_engine_position=i
+            mech_dvs += (("ac|propulsion|mech_engine|rating", eng_rating_paths, "kW/kg", self.engines[first_engine_position].power_rating),)
 
         if self.motors is not None and type(self.motors) == list:
             for i in range(len(self.motors)):
                 if self.motors[i] is not None:
                     motor_rating_paths.append("mech.mech%d.motor_rating" % (i + 1,))
-                    aux_mot=i
-            mech_dvs += (("ac|propulsion|motor|rating", motor_rating_paths, "kW/kg", self.motors[aux_mot].power_rating),)
+                    first_motor_position=i
+            mech_dvs += (("ac|propulsion|motor|rating", motor_rating_paths, "kW/kg", self.motors[first_motor_position].power_rating),)
 
         # if self.engines is not None and self.motors is not None:
         #     if self.mech_splitters is not None:
