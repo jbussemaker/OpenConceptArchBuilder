@@ -144,14 +144,17 @@ class MechPowerElements(ArchSubSystem):
     mech_splitters: Optional[Union[MechSplitter, List[Optional[MechSplitter]]]] = None
 
     mech_doh: Optional[Dict[str, float]] = None
+
     def get_dv_defs(self) -> List[Tuple[str, List[str], str, Any]]:
         if all(v is None for v in self.motors):
             self.motors = None
         if all(v is None for v in self.engines):
             self.engines = None
         mech_dvs = []
-        eng_rating_paths=[]
-        motor_rating_paths=[]
+        eng_rating_paths = []
+        motor_rating_paths = []
+
+        # Engine power design variable is only activated when there is an engine
         if self.engines is not None and type(self.engines) == list:
             for i in range(len(self.engines)):
                 if self.engines[i] is not None:
@@ -159,6 +162,7 @@ class MechPowerElements(ArchSubSystem):
                     first_engine_position=i
             mech_dvs += (("ac|propulsion|mech_engine|rating", eng_rating_paths, "kW/kg", self.engines[first_engine_position].power_rating),)
 
+        # Motor power design variable is only activated when there is a motor
         if self.motors is not None and type(self.motors) == list:
             for i in range(len(self.motors)):
                 if self.motors[i] is not None:
